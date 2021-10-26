@@ -4,6 +4,7 @@ use crossterm::{cursor, event, execute, queue, terminal};
 use std::io;
 use std::io::{stdout, Write};
 use std::time::Duration;
+use std::cmp;
 
 struct CleanUp;
 
@@ -109,10 +110,29 @@ impl CursorController {
     }
 }
 
+struct EditorRows {
+	row_contents: Vec<Box<str>>,
+}
+
+impl EditorRows {
+    fn new() -> Self {
+        Self {
+            row_contents: vec!["Hello World".into()]
+        }
+    }
+    fn number_of_rows(&self) -> usize {
+        1
+    }
+
+    fn get_row(&self) -> &str {
+        &self.row_contents[0]
+    }
+}
 struct Output {
     win_size: (usize, usize),
     editor_contents: EditorContents,
     cursor_controller: CursorController,
+    editor_rows: EditorRows,
 }
 
 impl Output {
@@ -124,6 +144,7 @@ impl Output {
             win_size,
             editor_contents: EditorContents::new(),
             cursor_controller: CursorController::new(win_size),
+            editor_rows: EditorRows::new(),
         }
     }
     fn clear_screen() -> crossterm::Result<()> {
@@ -135,6 +156,8 @@ impl Output {
         let screen_rows = self.win_size.1;
         let screen_columns = self.win_size.0;
         for i in 0..screen_rows {
+            if i >= self.editor_rows.number_of_rows() {
+
             if i == screen_rows / 3 {
                 let mut welcome = format!("Pound Editor --- Version {}", "0.1.0");
                 if welcome.len() > screen_columns {
@@ -149,6 +172,10 @@ impl Output {
                 self.editor_contents.push_str(&welcome);
             } else {
                 self.editor_contents.push('~');
+            }
+            } else {
+                let len = cmp::min(self.editor_rows.get_row().len(), screen_columns);
+                self.editor_contents.push_str(&self.editor_rows.get_row()[..len])
             }
             queue!(
                 self.editor_contents,
@@ -176,6 +203,7 @@ impl Output {
         self.cursor_controller.move_cursor(direction);
     }
 }
+
 
 struct Editor {
     reader: Reader,
